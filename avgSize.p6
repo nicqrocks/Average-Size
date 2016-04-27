@@ -19,18 +19,35 @@ sub MAIN (Str $location = ".", Bool :$dir) {
     }
 
     #Display the results to the user.
-    say "Total size:   $total bytes";
-    say "Average size: {$total/$count} bytes";
+    say "Total size:   " ~ niceSize($total);
+    say "Average size: " ~ niceSize($total/$count) if $count;
 }
 
+#Return the size of the file or directory.
 sub getSize (IO::Path:D $file) {
     #Return the size if it is a file.
     return $file.s if $file.f;
 
     #The file is a directory, recurse down it to find the size.
     my $total = 0;
-    for dir($file) -> $file {
-        $total += getSize($file);
+    for dir($file) -> $subfile {
+        #Add the size as long as the file is not a link and readable.
+        $total += getSize($subfile) if !$subfile.l && $subfile.r;
     }
     return $total;
+}
+
+
+#Display the size of files nicely.
+sub niceSize ($bytes) {
+    #Make some vars
+    my $KB = 1024;
+    my $MB = 1024 * 1024;
+
+    #Return a nice string depending on the amount of bytes.
+    given ($bytes) {
+        when * > $MB { return (($bytes / $MB) ~ " mb") }
+        when * > $KB { return (($bytes / $KB) ~ " kb") }
+        when * < $KB { return "$bytes bytes" }
+    }
 }
